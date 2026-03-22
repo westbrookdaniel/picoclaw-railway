@@ -10,28 +10,31 @@ RUN git clone --depth 1 --branch ${PICOCLAW_VERSION} https://github.com/sipeed/p
 RUN go mod download
 RUN make build
 
-FROM golang:1.25.8-alpine AS app-builder
-
-WORKDIR /app
-
-COPY go.mod /app/go.mod
-COPY main.go /app/main.go
-RUN CGO_ENABLED=0 go build -ldflags='-s -w' -o /out/server /app/main.go
-
 FROM alpine:3.22
 
-RUN apk add --no-cache bash ca-certificates curl git
+ARG TTYD_VERSION=1.7.7
+
+RUN apk add --no-cache bash ca-certificates curl git jq less procps && \
+    arch="$(apk --print-arch)" && \
+    case "$arch" in \
+        x86_64) ttyd_arch="x86_64" ;; \
+        aarch64) ttyd_arch="aarch64" ;; \
+        *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; \
+    esac && \
+    curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ttyd_arch}" -o /usr/local/bin/ttyd && \
+    chmod +x /usr/local/bin/ttyd
 
 COPY --from=picoclaw-builder /src/build/picoclaw /usr/local/bin/picoclaw
-COPY --from=app-builder /out/server /app/server
 
-RUN mkdir -p /data/.picoclaw
+RUN mkdir -p /app /data/.picoclaw
 
-COPY templates/ /app/templates/
 COPY start.sh /app/start.sh
+COPY session.sh /app/session.sh
 RUN chmod +x /app/start.sh
+RUN chmod +x /app/session.sh
 
 ENV HOME=/data
+ENV PICOCLAW_HOME=/data/.picoclaw
 ENV PICOCLAW_AGENTS_DEFAULTS_WORKSPACE=/data/.picoclaw/workspace
 
 CMD ["/app/start.sh"]
