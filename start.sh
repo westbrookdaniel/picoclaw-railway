@@ -5,6 +5,11 @@ SSH_USERNAME="${SSH_USERNAME:-admin}"
 SSH_PASSWORD="${SSH_PASSWORD:-}"
 SSH_PUBLIC_KEY="${SSH_PUBLIC_KEY:-}"
 SSH_PORT="${SSH_PORT:-2222}"
+GATEWAY_PUBLIC_PORT="${GATEWAY_PUBLIC_PORT:-8080}"
+GATEWAY_BASIC_AUTH_USERNAME="${GATEWAY_BASIC_AUTH_USERNAME:-admin}"
+GATEWAY_BASIC_AUTH_PASSWORD="${GATEWAY_BASIC_AUTH_PASSWORD:-}"
+PICOCLAW_GATEWAY_HOST="${PICOCLAW_GATEWAY_HOST:-127.0.0.1}"
+PICOCLAW_GATEWAY_PORT="${PICOCLAW_GATEWAY_PORT:-18790}"
 
 mkdir -p /data/.picoclaw/workspace
 mkdir -p /data/.picoclaw/sessions
@@ -21,6 +26,11 @@ chown -R "$SSH_USERNAME:$SSH_USERNAME" /data
 if [ -z "$SSH_PASSWORD" ] && [ -z "$SSH_PUBLIC_KEY" ]; then
     SSH_PASSWORD=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
     echo "Generated SSH password: $SSH_PASSWORD"
+fi
+
+if [ -z "$GATEWAY_BASIC_AUTH_PASSWORD" ]; then
+    GATEWAY_BASIC_AUTH_PASSWORD=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+    echo "Generated gateway password: $GATEWAY_BASIC_AUTH_PASSWORD"
 fi
 
 if [ -n "$SSH_PASSWORD" ]; then
@@ -43,6 +53,18 @@ for key_type in rsa ecdsa ed25519; do
         ssh-keygen -q -N "" -t "$key_type" -f "$key_path"
     fi
 done
+
+GATEWAY_AUTH_HASH=$(caddy hash-password --plaintext "$GATEWAY_BASIC_AUTH_PASSWORD")
+
+cat > /etc/caddy/Caddyfile <<EOF
+:$GATEWAY_PUBLIC_PORT {
+    basicauth {
+        $GATEWAY_BASIC_AUTH_USERNAME $GATEWAY_AUTH_HASH
+    }
+
+    reverse_proxy $PICOCLAW_GATEWAY_HOST:$PICOCLAW_GATEWAY_PORT
+}
+EOF
 
 cat > /etc/ssh/sshd_config <<EOF
 Port $SSH_PORT
@@ -71,4 +93,37 @@ if [ -n "$SSH_PUBLIC_KEY" ]; then
     echo "SSH public key auth: enabled"
 fi
 
-exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config
+echo "Starting public gateway proxy on port $GATEWAY_PUBLIC_PORT"
+echo "Gateway username: $GATEWAY_BASIC_AUTH_USERNAME"
+
+/usr/sbin/sshd -D -e -f /etc/ssh/sshd_config &
+sshd_pid=$!
+
+picoclaw gateway &
+gateway_pid=$!
+
+caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &
+caddy_pid=$!
+
+cleanup() {
+    kill "$sshd_pid" "$gateway_pid" "$caddy_pid" 2>/dev/null || true
+    wait "$sshd_pid" "$gateway_pid" "$caddy_pid" 2>/dev/null || true
+}
+
+trap cleanup INT TERM EXIT
+
+while :; do
+    if ! kill -0 "$sshd_pid" 2>/dev/null; then
+        echo "sshd exited" >&2
+        exit 1
+    fi
+    if ! kill -0 "$gateway_pid" 2>/dev/null; then
+        echo "picoclaw gateway exited" >&2
+        exit 1
+    fi
+    if ! kill -0 "$caddy_pid" 2>/dev/null; then
+        echo "caddy exited" >&2
+        exit 1
+    fi
+    sleep 2
+done

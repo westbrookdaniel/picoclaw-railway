@@ -12,7 +12,7 @@ RUN make build
 
 FROM alpine:3.22
 
-RUN apk add --no-cache bash ca-certificates curl git jq less openssh procps shadow
+RUN apk add --no-cache bash ca-certificates caddy curl git jq less openssh procps shadow
 
 COPY --from=picoclaw-builder /src/build/picoclaw /usr/local/bin/picoclaw
 
