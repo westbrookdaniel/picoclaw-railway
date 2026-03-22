@@ -59,5 +59,4 @@ Then open `http://localhost:8080` and log in with `admin` / `test`.
 ## Notes
 
 - If you do not set `TTYD_PASSWORD`, startup prints `Generated terminal password: ...` in the logs.
-- The terminal is intentionally limited to one client at a time.
 - Railway health checks are disabled here because the terminal is auth-protected at `/`.

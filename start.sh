@@ -19,7 +19,6 @@ echo "Terminal username: $TTYD_USERNAME"
 
 exec ttyd \
     -W \
-    -m 1 \
     -O \
     -p "$PORT" \
     -c "$TTYD_USERNAME:$TTYD_PASSWORD" \
