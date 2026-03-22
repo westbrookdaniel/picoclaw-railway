@@ -23,9 +23,8 @@ This repo keeps the Railway surface area small: it builds `picoclaw`, runs an Op
 | `SSH_USERNAME` | `admin` | SSH login username |
 | `SSH_PASSWORD` | *(auto-generated if no key is set)* | SSH login password |
 | `SSH_PUBLIC_KEY` | empty | Public key to add to `/data/.ssh/authorized_keys` |
-| `SSH_PORT` | `2222` | SSH port; falls back to `PORT` if Railway injects one |
+| `SSH_PORT` | `2222` | SSH port used inside the container |
 | `PICOCLAW_VERSION` | `main` | Git branch or tag to build from upstream PicoClaw |
-| `PORT` | unset | Optional Railway-provided fallback port |
 
 ## First-time setup
 
@@ -62,4 +61,5 @@ Then connect with `ssh admin@localhost -p 2222` and use password `test`.
 
 - If you set `SSH_PUBLIC_KEY`, key auth is enabled using `/data/.ssh/authorized_keys`.
 - If you do not set either `SSH_PASSWORD` or `SSH_PUBLIC_KEY`, startup prints `Generated SSH password: ...` in the logs.
+- SSH host keys are stored under `/data/.ssh/host_keys` so clients do not see a new host fingerprint on every redeploy.
 - Password SSH is supported because you asked for it, but key auth is safer for any public deployment.
