@@ -5,20 +5,22 @@ mkdir -p /data/.picoclaw/workspace
 mkdir -p /data/.picoclaw/sessions
 mkdir -p /data/.picoclaw/cron
 
-TTYD_USERNAME="${TTYD_USERNAME:-admin}"
-TTYD_PASSWORD="${TTYD_PASSWORD:-}"
+TERMINAL_USERNAME="${TERMINAL_USERNAME:-${TTYD_USERNAME:-admin}}"
+TERMINAL_PASSWORD="${TERMINAL_PASSWORD:-${TTYD_PASSWORD:-}}"
 PORT="${PORT:-8080}"
 
-if [ -z "$TTYD_PASSWORD" ]; then
-    TTYD_PASSWORD=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
-    echo "Generated terminal password: $TTYD_PASSWORD"
+if [ -z "$TERMINAL_PASSWORD" ]; then
+    TERMINAL_PASSWORD=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+    echo "Generated terminal password: $TERMINAL_PASSWORD"
 fi
 
-echo "Starting ttyd on port $PORT"
-echo "Terminal username: $TTYD_USERNAME"
+echo "Starting GoTTY on port $PORT"
+echo "Terminal username: $TERMINAL_USERNAME"
 
-exec ttyd \
-    -W \
+exec gotty \
+    --permit-write \
+    --reconnect \
+    --reconnect-time 10 \
     -p "$PORT" \
-    -c "$TTYD_USERNAME:$TTYD_PASSWORD" \
+    -c "$TERMINAL_USERNAME:$TERMINAL_PASSWORD" \
     /app/session.sh

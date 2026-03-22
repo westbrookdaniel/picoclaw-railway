@@ -12,17 +12,19 @@ RUN make build
 
 FROM alpine:3.22
 
-ARG TTYD_VERSION=1.7.7
+ARG GOTTY_VERSION=v1.0.1
 
-RUN apk add --no-cache bash ca-certificates curl git jq less procps && \
+RUN apk add --no-cache bash ca-certificates curl git jq less procps tar && \
     arch="$(apk --print-arch)" && \
     case "$arch" in \
-        x86_64) ttyd_arch="x86_64" ;; \
-        aarch64) ttyd_arch="aarch64" ;; \
-        *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; \
+        x86_64) gotty_arch="amd64" ;; \
+        armv7|armhf) gotty_arch="arm" ;; \
+        *) echo "Unsupported architecture for GoTTY: $arch" >&2; exit 1 ;; \
     esac && \
-    curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ttyd_arch}" -o /usr/local/bin/ttyd && \
-    chmod +x /usr/local/bin/ttyd
+    curl -fsSL "https://github.com/yudai/gotty/releases/download/${GOTTY_VERSION}/gotty_linux_${gotty_arch}.tar.gz" -o /tmp/gotty.tar.gz && \
+    tar -xzf /tmp/gotty.tar.gz -C /usr/local/bin gotty && \
+    chmod +x /usr/local/bin/gotty && \
+    rm -f /tmp/gotty.tar.gz
 
 COPY --from=picoclaw-builder /src/build/picoclaw /usr/local/bin/picoclaw
 
