@@ -12,16 +12,14 @@ FROM ghcr.io/openai/codex-universal:latest
 
 USER root
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-      openssh-server \
-      passwd \
-      less \
-      procps \
-      vim \
-      gh \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  openssh-server \
+  passwd \
+  less \
+  procps \
+  vim \
+  gh \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=picoclaw-builder /src/build/picoclaw /usr/local/bin/picoclaw
 
