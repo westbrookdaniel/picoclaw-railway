@@ -64,7 +64,7 @@ PermitUserEnvironment no
 AllowTcpForwarding no
 X11Forwarding no
 PrintMotd no
-Subsystem sftp /usr/lib/ssh/sftp-server
+Subsystem sftp /usr/lib/openssh/sftp-server
 EOF
 
 echo "Starting sshd on port $SSH_PORT"
